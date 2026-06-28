@@ -1,0 +1,6 @@
+1-Place all of these scripts in a single folder 
+2-If you have VSCode use the raceGui.py  by running the command python raceGui.py 
+3-Fill in the info you want and then click generate race , you will find that an assets folder is created in the same folder along the scripts 
+TO BE VERY CLEAR YOU NEED TO PLACE SPRITES MANUALLY , ALSO THIS IS A TESTING TO SEE IF IT WORKS AT ALL 
+I HAVE NO SPRITES MYSELF AND WANT TO SEE IF IT ACTUALLY COULD WORK 
+RACE MANAGER IS VERY BUGGED AND MAY NOT WORK AT ALL
