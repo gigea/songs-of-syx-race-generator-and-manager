@@ -1,73 +1,72 @@
+#!/usr/bin/env python3
+"""
+Songs of Syx - Race Generator GUI
+Create new races with full customization (no sprite tab).
+"""
+
 import os
 import sys
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, scrolledtext
 
-# Try to import the generator
 try:
     import raceGen
-    print("✅ generate_race imported successfully")
+    print("✅ raceGen imported successfully")
 except ImportError as e:
-    print(f"❌ Failed to import generate_race: {e}")
+    print(f"❌ Failed to import raceGen: {e}")
     sys.exit(1)
+
 
 class FullRaceGeneratorGUI:
     def __init__(self, root):
         self.root = root
         root.title("Songs of Syx Race Generator - Full Customization")
-        root.geometry("1050x850")
+        root.geometry("1100x900")
         root.minsize(1000, 750)
 
-        # Main notebook for tabs
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # --- Tab 1: Identity ---
+        # Tabs (all except Sprites)
         self.tab_identity = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_identity, text="Identity")
         self.build_identity_tab()
 
-        # --- Tab 2: Properties ---
         self.tab_props = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_props, text="Properties")
         self.build_properties_tab()
 
-        # --- Tab 3: Population ---
         self.tab_pop = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_pop, text="Population")
         self.build_population_tab()
 
-        # --- Tab 4: Preferences ---
         self.tab_pref = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_pref, text="Preferences")
         self.build_preferences_tab()
 
-        # --- Tab 5: Traits ---
         self.tab_traits = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_traits, text="Traits")
         self.build_traits_tab()
 
-        # --- Tab 6: Resources & Stats ---
         self.tab_res = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_res, text="Resources & Stats")
         self.build_resources_stats_tab()
 
-        # --- Tab 7: Boosts ---
         self.tab_boosts = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_boosts, text="Boosts")
         self.build_boosts_tab()
 
-        # --- Tab 8: Cultural ---
         self.tab_cultural = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_cultural, text="Cultural")
         self.build_cultural_tab()
 
-        # --- Tab 9: Equipment ---
         self.tab_equip = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_equip, text="Equipment")
         self.build_equipment_tab()
 
-        # --- Bottom controls ---
+        # No Sprites tab – sprite names auto‑generated
+
+        # Bottom controls
         bottom_frame = ttk.Frame(root)
         bottom_frame.pack(fill="x", padx=10, pady=10)
 
@@ -86,11 +85,10 @@ class FullRaceGeneratorGUI:
         self.generate_btn = ttk.Button(bottom_frame, text="🚀 Generate Race!", command=self.generate)
         self.generate_btn.pack(side="right")
 
-        # Status bar
         self.status = ttk.Label(root, text="Ready", relief="sunken", anchor="w")
         self.status.pack(fill="x", padx=10, pady=(0,5))
 
-    # ---------- Helper: add a labeled entry ----------
+    # ---------- Helpers ----------
     def add_entry(self, parent, label, row, col, default="", width=20, **kwargs):
         ttk.Label(parent, text=label + ":").grid(row=row, column=col, sticky="w", padx=5, pady=3)
         var = tk.StringVar(value=str(default))
@@ -98,7 +96,6 @@ class FullRaceGeneratorGUI:
         entry.grid(row=row, column=col+1, sticky="w", padx=5, pady=3)
         return var
 
-    # ---------- Helper: add a scrolled text area ----------
     def add_textarea(self, parent, label, row, col, default="", height=4, width=50):
         ttk.Label(parent, text=label + ":").grid(row=row, column=col, sticky="nw", padx=5, pady=3)
         text_widget = scrolledtext.ScrolledText(parent, height=height, width=width)
@@ -107,7 +104,7 @@ class FullRaceGeneratorGUI:
             text_widget.insert("1.0", default)
         return text_widget
 
-    # ---------- Tab Builders ----------
+    # ---------- Tab builders ----------
     def build_identity_tab(self):
         parent = self.tab_identity
         canvas = tk.Canvas(parent)
@@ -139,13 +136,11 @@ class FullRaceGeneratorGUI:
         ttk.Label(scroll_frame, text="Challenge:").grid(row=14, column=0, sticky="w", padx=5, pady=3)
         ttk.Combobox(scroll_frame, textvariable=self.challenge_var, values=["Easy", "Medium", "Hard"], state="readonly", width=10).grid(row=14, column=1, sticky="w", padx=5, pady=3)
 
-        # Short Description
         ttk.Label(scroll_frame, text="Short Description (DESC):").grid(row=15, column=0, sticky="nw", padx=5, pady=3)
         self.desc_text = scrolledtext.ScrolledText(scroll_frame, height=4, width=70)
         self.desc_text.grid(row=15, column=1, columnspan=3, sticky="w", padx=5, pady=3)
         self.desc_text.insert("1.0", "Elves, said to be the last creation of the gods. Excel at intelligent jobs and are decent farmers. They can be a constant headache with insanity, criminal behavior, and demands for lavish surroundings.")
 
-        # Long Description
         ttk.Label(scroll_frame, text="Long Description (DESC_LONG):").grid(row=16, column=0, sticky="nw", padx=5, pady=3)
         self.desc_long_text = scrolledtext.ScrolledText(scroll_frame, height=6, width=70)
         self.desc_long_text.grid(row=16, column=1, columnspan=3, sticky="w", padx=5, pady=3)
@@ -159,8 +154,8 @@ class FullRaceGeneratorGUI:
             ("Width", "WIDTH", 9),
             ("Baby Days", "BABY_DAYS", 12),
             ("Child Days", "CHILD_DAYS", 80),
-            ("Corpse Decay", "CORPSE_DECAY", "true"),   # lowercase
-            ("Sleeps", "SLEEPS", "true"),               # lowercase
+            ("Corpse Decay", "CORPSE_DECAY", "true"),
+            ("Sleeps", "SLEEPS", "true"),
             ("Slave Price", "SLAVE_PRICE", 11),
             ("Slave Price Recovery", "SLAVE_PRICE_RECOVERY", 0.5),
             ("Raid Mercinary", "RAID_MERCINARY", 1.0),
@@ -169,7 +164,7 @@ class FullRaceGeneratorGUI:
         ]
         self.prop_vars = {}
         for i, (label, key, default) in enumerate(props):
-            ttk.Label(parent, text=label + ":").grid(row=i, column=0, sticky="w", padx=5, pady=3)
+            ttk.Label(parent, text=label+":").grid(row=i, column=0, sticky="w", padx=5, pady=3)
             var = tk.StringVar(value=str(default))
             entry = ttk.Entry(parent, textvariable=var, width=15)
             entry.grid(row=i, column=1, sticky="w", padx=5, pady=3)
@@ -212,7 +207,6 @@ class FullRaceGeneratorGUI:
     def build_preferences_tab(self):
         parent = ttk.Frame(self.tab_pref)
         parent.pack(fill="both", expand=True, padx=10, pady=10)
-
         pref_notebook = ttk.Notebook(parent)
         pref_notebook.pack(fill="both", expand=True)
 
@@ -303,13 +297,11 @@ class FullRaceGeneratorGUI:
         parent = ttk.Frame(self.tab_res)
         parent.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Resources
         ttk.Label(parent, text="Starting Resources (key:value, one per line):").grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=5)
         self.resources_text = scrolledtext.ScrolledText(parent, height=3, width=60)
         self.resources_text.grid(row=1, column=0, columnspan=2, sticky="w", padx=5, pady=5)
         self.resources_text.insert("1.0", "MEAT:30\nLEATHER:10")
 
-        # Stats - raw block, no parsing
         ttk.Label(parent, text="Stats (raw block – copy from HUMAN.txt and modify):").grid(row=2, column=0, columnspan=2, sticky="w", padx=5, pady=(10,5))
         ttk.Label(parent, text="Format: KEY: { subkey: value, subkey2: value, },", font=("", 9), foreground="gray").grid(row=3, column=0, columnspan=2, sticky="w", padx=5)
         
@@ -449,7 +441,7 @@ Difficult to please"""
         if dirname:
             self.output_dir_var.set(dirname)
 
-    # ---------- Utility: get text from ScrolledText or Entry ----------
+    # ---------- Utility ----------
     def get_text_content(self, widget):
         if isinstance(widget, scrolledtext.ScrolledText):
             return widget.get("1.0", "end-1c").strip()
@@ -457,7 +449,6 @@ Difficult to please"""
             return widget.get().strip()
 
     def parse_list_from_widget(self, widget):
-        """Return list of strings, splitting by commas and newlines."""
         content = self.get_text_content(widget)
         if not content:
             return []
@@ -469,7 +460,6 @@ Difficult to please"""
         return items
 
     def parse_dict_from_text(self, widget):
-        """Return dict from key:value pairs, one per line or comma-separated."""
         content = self.get_text_content(widget)
         result = {}
         if not content:
@@ -482,7 +472,6 @@ Difficult to please"""
                 k, v = part.split(':', 1)
                 k = k.strip()
                 v = v.strip()
-                # Handle booleans
                 if v.lower() == "true":
                     result[k] = True
                 elif v.lower() == "false":
@@ -514,7 +503,6 @@ Difficult to please"""
                 messagebox.showerror("Error", "Race name must contain only letters and underscores.")
                 return
 
-            # Build overrides dictionary
             overrides = {}
             print("\n  📋 Values collected from GUI:")
 
@@ -597,7 +585,7 @@ Difficult to please"""
             overrides["RESOURCE"] = self.parse_dict_from_text(self.resources_text)
             print(f"\n  📋 Resources: {overrides['RESOURCE']}")
 
-            # Stats - raw text, no parsing
+            # Stats
             stats_raw = self.stats_text.get("1.0", "end-1c").strip()
             overrides["STATS_RAW"] = stats_raw
             print(f"\n  📋 Stats length: {len(stats_raw)} characters")
@@ -606,7 +594,7 @@ Difficult to please"""
             overrides["BOOST"] = self.parse_dict_from_text(self.boosts_text)
             print(f"\n  📋 Boosts: {len(overrides['BOOST'])} items")
 
-            # Cultural identity
+            # Identity
             overrides["IDENTITY"] = {}
             for key, var in self.pronoun_vars.items():
                 overrides["IDENTITY"][key] = [x.strip() for x in var.get().split(',') if x.strip()]
@@ -649,16 +637,16 @@ Difficult to please"""
             print(f"\n  📋 Description length: {len(desc_short)} chars")
             print(f"  📋 Long description length: {len(desc_long)} chars")
 
-            # --- Patch the generate_race module ---
-            print("\n  🔧 Patching generate_race.DEFAULTS...")
+            # Patch raceGen
+            print("\n  🔧 Patching raceGen.DEFAULTS...")
             original_defaults = raceGen.DEFAULTS.copy()
             for key, value in overrides.items():
                 raceGen.DEFAULTS[key] = value
             raceGen.DEFAULTS["DESC_TEXT"] = desc_short
             raceGen.DEFAULTS["DESC_LONG_TEXT"] = desc_long
 
-            # --- Call the generator ---
-            print("\n  🚀 Calling generate_race.generate_race()...")
+            # Call generator
+            print("\n  🚀 Calling raceGen.generate_race()...")
             print("-" * 60)
             
             raceGen.generate_race(race_name, output_dir, copy_sprites, template_race)
@@ -676,7 +664,6 @@ Difficult to please"""
             messagebox.showerror("Error", f"Generation failed:\n\n{str(e)}\n\nCheck the console for details.")
             self.status.config(text="Error occurred.")
         finally:
-            # Restore original defaults
             if 'original_defaults' in locals():
                 raceGen.DEFAULTS.clear()
                 raceGen.DEFAULTS.update(original_defaults)
