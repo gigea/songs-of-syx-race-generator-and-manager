@@ -4,3 +4,7 @@ REMEMBER TO PLACE NECESSARY SPRITES IN THEIR FOLDER AND GIVE THEM CORRECT NAMES
 feel free to modifiy the scripts , and talk to me in discord
 Crusader69#5556
 .crusader69
+
+
+should you ever git confused check this great guide out 
+https://github.com/4rg0n/songs-of-syx-mod-example/blob/master/doc/config/race.md
