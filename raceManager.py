@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """
-Songs of Syx - Race Editor
-Load, edit and save existing races from the base game or any mod.
-Self-contained – no external dependencies beyond Python standard library + tkinter.
+Songs of Syx - Race Editor (Manager)
+Load, edit and save existing races – no sprite tab.
 """
 
 import os
 import sys
-import re
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, scrolledtext
 
@@ -18,10 +16,9 @@ BASE_GAME_PATH = r"C:\Games-C\Songs of Syx"
 MODS_PATH = r"C:\Users\Rida\AppData\Roaming\songsofsyx\mods"
 
 # =============================================================================
-# FORMATTING HELPERS & TEMPLATES (copied from generate_race.py)
+# FORMATTING HELPERS & TEMPLATES
 # =============================================================================
 
-# --- Templates ---
 MAIN_CONFIG_TEMPLATE = '''PLAYABLE: true,
 PROPERTIES: {{
 \tHEIGHT: {HEIGHT},
@@ -102,9 +99,9 @@ RESOURCE: {{
 STATS: {{
 {STATS_RAW}
 }},
-SPRITE_FILE: {RACE_UPPER},
-ICON_SMALL: 24->race->{RACE_NAME}->0,
-ICON_BIG: 32->race->{RACE_NAME}->0,
+SPRITE_FILE: {SPRITE_FILE},
+ICON_SMALL: {ICON_SMALL},
+ICON_BIG: {ICON_BIG},
 
 BOOST: {{
 {BOOST_DICT}
@@ -190,7 +187,6 @@ CONS: [
 ],
 '''
 
-# --- Formatting helpers ---
 def format_list_tabs(items, indent_tabs=2):
     if not items:
         return ""
@@ -224,7 +220,7 @@ def format_cultural_list(items):
     return "\n\t".join(f'"{item}",' for item in items)
 
 # =============================================================================
-# PARSER – converts the custom config format to Python dicts
+# PARSER
 # =============================================================================
 
 class RaceParser:
@@ -241,7 +237,6 @@ class RaceParser:
         with open(filepath, 'r', encoding='utf-8') as f:
             text = f.read()
 
-        # Tokenizer with improved handling of identifiers like "24->race->Human->0"
         tokens = []
         i = 0
         length = len(text)
@@ -289,20 +284,15 @@ class RaceParser:
                 col += 1
                 continue
 
-            # Try to parse a number
             if ch.isdigit() or (ch == '-' and i+1 < length and text[i+1].isdigit()):
                 start_i = i
                 start_col = col
                 num_str = ''
-                # collect digits and optional dot
                 while i < length and (text[i].isdigit() or text[i] == '.'):
                     num_str += text[i]
                     i += 1
                     col += 1
-                # Check if next char is part of an identifier (letter, '_', '*', '-', '>')
-                # If so, we need to treat the whole as identifier
                 if i < length and (text[i].isalpha() or text[i] in '_*-'):
-                    # Revert and treat as identifier
                     i = start_i
                     col = start_col
                     ident = ''
@@ -312,21 +302,18 @@ class RaceParser:
                         col += 1
                     tokens.append(('IDENTIFIER', ident, line_no, col))
                 else:
-                    # It's a number
                     if '.' in num_str:
                         tokens.append(('NUMBER', num_str, line_no, col))
                     else:
                         tokens.append(('NUMBER', num_str, line_no, col))
                 continue
 
-            # Identifiers (letters, underscore, star, also hyphen and greater-than if not starting with digit)
             if ch.isalpha() or ch == '_' or ch == '*':
                 ident = ''
                 while i < length and (text[i].isalnum() or text[i] in '_*-.'):
                     ident += text[i]
                     i += 1
                     col += len(ident)
-                # Check if boolean
                 if ident.lower() == 'true':
                     tokens.append(('BOOLEAN', True, line_no, col))
                 elif ident.lower() == 'false':
@@ -335,18 +322,15 @@ class RaceParser:
                     tokens.append(('IDENTIFIER', ident, line_no, col))
                 continue
 
-            # Single character tokens
             if ch in '{}[],:':
                 tokens.append((ch, ch, line_no, col))
                 i += 1
                 col += 1
                 continue
 
-            # Skip any other characters (shouldn't happen)
             i += 1
             col += 1
 
-        # Parser
         class _Parser:
             def __init__(self, tokens):
                 self.tokens = tokens
@@ -455,7 +439,7 @@ class RaceParser:
         return _Parser(tokens).parse()
 
 # =============================================================================
-# RACE EDITOR GUI
+# RACE EDITOR GUI (no sprites tab)
 # =============================================================================
 
 class RaceEditorGUI:
@@ -485,62 +469,55 @@ class RaceEditorGUI:
         ttk.Button(top, text="Load from File...", command=self.load_from_file).pack(side="left", padx=2)
         ttk.Button(top, text="💾 Save", command=self.save_race).pack(side="left", padx=2)
 
+        self.path_label = ttk.Label(top, text="", foreground="gray")
+        self.path_label.pack(side="right", padx=10)
+
         self.status = ttk.Label(root, text="Ready", relief="sunken", anchor="w")
         self.status.pack(fill="x", padx=10, pady=(0,5))
 
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.build_tabs()
-        self.refresh_list()
-
-    # ---- Tab builders ----
-    def build_tabs(self):
-        # Identity
+        # Build tabs (without sprites)
         self.tab_identity = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_identity, text="Identity")
         self._build_identity_tab()
 
-        # Properties
         self.tab_props = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_props, text="Properties")
         self._build_props_tab()
 
-        # Population
         self.tab_pop = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_pop, text="Population")
         self._build_pop_tab()
 
-        # Preferences
         self.tab_pref = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_pref, text="Preferences")
         self._build_pref_tab()
 
-        # Traits
         self.tab_traits = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_traits, text="Traits")
         self._build_traits_tab()
 
-        # Resources & Stats
         self.tab_res = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_res, text="Resources & Stats")
         self._build_res_tab()
 
-        # Boosts
         self.tab_boosts = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_boosts, text="Boosts")
         self._build_boosts_tab()
 
-        # Cultural
         self.tab_cultural = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_cultural, text="Cultural")
         self._build_cultural_tab()
 
-        # Equipment
         self.tab_equip = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_equip, text="Equipment")
         self._build_equip_tab()
 
+        self.refresh_list()
+
+    # ---- Tab builders (identical to before, no sprites) ----
     def _build_identity_tab(self):
         parent = ttk.Frame(self.tab_identity)
         parent.pack(fill="both", expand=True, padx=10, pady=10)
@@ -832,25 +809,42 @@ class RaceEditorGUI:
         ttk.Label(inner, text="Army Names (one per line):").grid(row=row, column=0, sticky="nw", padx=5, pady=5)
         self.army_names_text = scrolledtext.ScrolledText(inner, height=8, width=60)
         self.army_names_text.grid(row=row, column=1, padx=5, pady=5)
-        self.army_names_text.insert("1.0",
-            "Shields of Vengeance\nSwords of Tomorrow\nLegends of Lake Hoth\n"
-            "The Inithil Rangers\nDarth's Opulent Oppressors\nThe Boys\n"
-            "The Moster Hunters\nThe Unbreakables\nThe Immortals\n"
-            "The Force of the Astarii\nThe Glimmering Blades\nThe Deathstalkers\n"
-            "The Barbarians\nThe League of Extraordinary Gentlemen\n"
-            "The Brotherhood of Ergoth\nThe Swordsmen of Naath")
+        default_army = """Shields of Vengeance
+Swords of Tomorrow
+Legends of Lake Hoth
+The Inithil Rangers
+Darth's Opulent Oppressors
+The Boys
+The Moster Hunters
+The Unbreakables
+The Immortals
+The Force of the Astarii
+The Glimmering Blades
+The Deathstalkers
+The Barbarians
+The League of Extraordinary Gentlemen
+The Brotherhood of Ergoth
+The Swordsmen of Naath"""
+        self.army_names_text.insert("1.0", default_army)
 
         row += 1
         ttk.Label(inner, text="Pros (one per line):").grid(row=row, column=0, sticky="nw", padx=5, pady=5)
         self.pros_text = scrolledtext.ScrolledText(inner, height=5, width=60)
         self.pros_text.grid(row=row, column=1, padx=5, pady=5)
-        self.pros_text.insert("1.0", "Excellent scientists and managers\nGood farmers\nGood learning rate")
+        default_pros = """Excellent scientists and managers
+Good farmers
+Good learning rate"""
+        self.pros_text.insert("1.0", default_pros)
 
         row += 1
         ttk.Label(inner, text="Cons (one per line):").grid(row=row, column=0, sticky="nw", padx=5, pady=5)
         self.cons_text = scrolledtext.ScrolledText(inner, height=5, width=60)
         self.cons_text.grid(row=row, column=1, padx=5, pady=5)
-        self.cons_text.insert("1.0", "Unremarkable in battle\nCriminal and mentally unstable\nLimited natural skills\nDifficult to please")
+        default_cons = """Unremarkable in battle
+Criminal and mentally unstable
+Limited natural skills
+Difficult to please"""
+        self.cons_text.insert("1.0", default_cons)
 
     def _build_equip_tab(self):
         parent = ttk.Frame(self.tab_equip)
@@ -863,7 +857,7 @@ class RaceEditorGUI:
         ttk.Entry(parent, textvariable=self.equip_disabled_var, width=80).pack(anchor="w", padx=5)
 
     # -------------------------------------------------------------------------
-    # Race discovery
+    # Race discovery, load, save (unchanged)
     # -------------------------------------------------------------------------
 
     def refresh_list(self):
@@ -885,31 +879,28 @@ class RaceEditorGUI:
                                 if f.endswith('.txt'):
                                     races.append((f"{mod} ({ver})", f[:-4], race_dir))
         self.race_list = races
-        self.race_combo['values'] = [f"{src}: {race}" for src, race, _ in races]
+        self.race_combo['values'] = [f"{race} ({src})" for src, race, _ in races]
         if races:
             self.race_combo.current(0)
         self.status.config(text=f"Found {len(races)} races")
-
-    # -------------------------------------------------------------------------
-    # Load
-    # -------------------------------------------------------------------------
 
     def load_race(self, event=None):
         selection = self.race_combo.get()
         if not selection:
             return
-        parts = selection.split(": ", 1)
-        if len(parts) != 2:
-            return
-        src_desc, race_name = parts
+        if " (" in selection and selection.endswith(")"):
+            race_name = selection.split(" (")[0]
+        else:
+            race_name = selection
         for src, race, race_dir in self.race_list:
-            if f"{src}: {race}" == selection:
+            if race == race_name:
                 main_path = os.path.join(race_dir, f"{race}.txt")
                 base = os.path.dirname(os.path.dirname(race_dir))
                 text_path = os.path.join(base, "text", "race", f"{race}.txt")
                 if os.path.exists(main_path) and os.path.exists(text_path):
                     self.load_files(main_path, text_path, race)
-                    self.status.config(text=f"Loaded {race} from {src_desc}")
+                    self.status.config(text=f"Loaded {race} from {src}")
+                    self.path_label.config(text=f"Main: {main_path}")
                 else:
                     messagebox.showerror("Error", f"Files not found for {race}")
                 break
@@ -942,12 +933,9 @@ class RaceEditorGUI:
             self.current_race = race_name
             self.populate_gui()
             self.status.config(text=f"Loaded {race_name}")
+            self.path_label.config(text=f"Main: {main_path}")
         except Exception as e:
             messagebox.showerror("Parse Error", f"Failed to parse:\n{str(e)}")
-
-    # -------------------------------------------------------------------------
-    # Populate GUI
-    # -------------------------------------------------------------------------
 
     def populate_gui(self):
         # Identity
@@ -999,7 +987,7 @@ class RaceEditorGUI:
         # Resources
         self._set_text_dict(self.resources_text, self.main_data.get("RESOURCE", {}))
 
-        # Stats – we reconstruct from parsed data if possible, else leave placeholder
+        # Stats
         stats = self.main_data.get("STATS", {})
         if stats:
             lines = []
@@ -1031,6 +1019,8 @@ class RaceEditorGUI:
         self.equip_enabled_var.set(", ".join(self.main_data.get("EQUIPMENT_ENABLED", [])))
         self.equip_disabled_var.set(", ".join(self.main_data.get("EQUIPMENT_NOT_ENABLED", [])))
 
+        # Sprite fields are not shown – they are auto-generated on save.
+
     def _set_text_list(self, widget, data):
         widget.delete("1.0", "end")
         if data:
@@ -1043,7 +1033,7 @@ class RaceEditorGUI:
             widget.insert("1.0", "\n".join(lines))
 
     # -------------------------------------------------------------------------
-    # Save
+    # Save (unchanged)
     # -------------------------------------------------------------------------
 
     def save_race(self):
@@ -1064,10 +1054,8 @@ class RaceEditorGUI:
             os.makedirs(os.path.dirname(target_main), exist_ok=True)
             os.makedirs(os.path.dirname(target_text), exist_ok=True)
 
-        # Gather values
         overrides = self._gather_values()
 
-        # Build main config
         race_name = self.current_race
         race_upper = race_name.upper()
         race_lower = race_name.lower()
@@ -1111,6 +1099,11 @@ class RaceEditorGUI:
         subs_main["RESOURCE_DICT"] = format_dict_tabs(overrides.get("RESOURCE", {}), indent_tabs=1)
         subs_main["BOOST_DICT"] = format_dict_tabs(overrides.get("BOOST", {}), indent_tabs=1)
 
+        # Auto-generate sprite fields
+        subs_main["SPRITE_FILE"] = race_upper
+        subs_main["ICON_SMALL"] = f"24->race->{race_name}->0"
+        subs_main["ICON_BIG"] = f"32->race->{race_name}->0"
+
         equip_enabled = overrides.get("EQUIPMENT_ENABLED", [])
         equip_disabled = overrides.get("EQUIPMENT_NOT_ENABLED", [])
         subs_main["EQUIPMENT_ENABLED_LIST"] = format_equipment_list(equip_enabled)
@@ -1121,7 +1114,6 @@ class RaceEditorGUI:
 
         main_content = MAIN_CONFIG_TEMPLATE.format(**subs_main)
 
-        # Build cultural content
         subs_text = {}
         subs_text["RACE_NAME"] = race_name
         subs_text["RACE_NAMES"] = self.race_names_var.get().strip() or (race_name + "s")
@@ -1155,7 +1147,6 @@ class RaceEditorGUI:
 
         text_content = TEXT_RACE_TEMPLATE.format(**subs_text)
 
-        # Write files
         try:
             with open(target_main, "w", encoding="utf-8") as f:
                 f.write(main_content)
@@ -1163,6 +1154,7 @@ class RaceEditorGUI:
                 f.write(text_content)
             messagebox.showinfo("Saved", f"Race saved to:\n{target_main}\n{target_text}")
             self.status.config(text=f"Saved {race_name}")
+            self.path_label.config(text=f"Main: {target_main}")
         except Exception as e:
             messagebox.showerror("Save Error", f"Failed to save:\n{str(e)}")
 
