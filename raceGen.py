@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Songs of Syx - Race Generator
-Exact formatting matching HUMAN.txt – tabs, commas, spacing.
+Songs of Syx - Race Generator Backend
+Creates a complete race folder structure and configuration files.
+Used by raceGui.py (GUI) or as a standalone script.
 """
 
 import os
@@ -27,6 +28,9 @@ DEFAULTS = {
     "POPULATION_MAX": 1.0,
     "POPULATION_GROWTH": 0.075,
     "CHALLENGE": "Medium",
+    "SPRITE_FILE": "",   # will default to race_upper
+    "ICON_SMALL": "",    # will default to "24->race->{RACE_NAME}->0"
+    "ICON_BIG": "",      # will default to "32->race->{RACE_NAME}->0"
     # Default stats block - with trailing comma after last entry
     "STATS_RAW": '''\tACCESS_NOISE: {
 \t\tCITIZEN: 0.5,
@@ -139,9 +143,9 @@ RESOURCE: {{
 STATS: {{
 {STATS_RAW}
 }},
-SPRITE_FILE: {RACE_UPPER},
-ICON_SMALL: 24->race->{RACE_NAME}->0,
-ICON_BIG: 32->race->{RACE_NAME}->0,
+SPRITE_FILE: {SPRITE_FILE},
+ICON_SMALL: {ICON_SMALL},
+ICON_BIG: {ICON_BIG},
 
 BOOST: {{
 {BOOST_DICT}
@@ -233,35 +237,19 @@ CONS: [
 # ============================================
 
 def format_list_tabs(items, indent_tabs=2):
-    """
-    Format a list with tabs, exactly as in HUMAN.txt.
-    - Each item on its own line, indented with tabs.
-    - Trailing comma after every item (including last).
-    - If empty, returns an empty string (so nothing between brackets).
-    """
     if not items:
         return ""
     prefix = "\t" * indent_tabs
-    lines = []
-    for item in items:
-        lines.append(f"{prefix}{item},")
+    lines = [f"{prefix}{item}," for item in items]
     return "\n".join(lines)
 
 
 def format_dict_tabs(d, indent_tabs=2):
-    """
-    Format a dict with tabs, exactly as in HUMAN.txt.
-    - Format: "\tKEY: value," on each line.
-    - Trailing comma after every pair.
-    - If empty, returns empty string.
-    - Converts Python bool True/False to lowercase "true"/"false".
-    """
     if not d:
         return ""
     prefix = "\t" * indent_tabs
     lines = []
     for k, v in d.items():
-        # Handle boolean values
         if isinstance(v, bool):
             v_str = "true" if v else "false"
         elif isinstance(v, str):
@@ -273,21 +261,12 @@ def format_dict_tabs(d, indent_tabs=2):
 
 
 def format_equipment_list(items):
-    """
-    Format equipment list – items on separate lines, indented with tab, trailing comma.
-    If empty, returns an empty string (so brackets will be empty with just newline).
-    """
     if not items:
         return ""
     return "\n\t".join(f"{item}," for item in items)
 
 
 def format_cultural_list(items):
-    """
-    Format a cultural list (HELLO, GOODBYE, etc.) – each item on new line,
-    indented with one tab, wrapped in quotes, with trailing comma.
-    If empty, returns empty string.
-    """
     if not items:
         return ""
     return "\n\t".join(f'"{item}",' for item in items)
@@ -307,7 +286,6 @@ def generate_race(race_name, output_dir="assets", copy_sprite=False, template_ra
     # --------------------------------------------------------------------
     subs_main = {}
 
-    # Simple properties
     simple_keys = [
         "HEIGHT", "WIDTH", "BABY_DAYS", "CHILD_DAYS", "CORPSE_DECAY", "SLEEPS",
         "SLAVE_PRICE", "SLAVE_PRICE_RECOVERY", "RAID_MERCINARY",
@@ -323,19 +301,16 @@ def generate_race(race_name, output_dir="assets", copy_sprite=False, template_ra
     subs_main["RACE_NAME"] = race_name
     subs_main["RACE_UPPER"] = race_upper
 
-    # Climate
     climate = DEFAULTS.get("CLIMATE", {})
     subs_main["CLIMATE_COLD"] = str(climate.get("COLD", 0.8))
     subs_main["CLIMATE_TEMPERATE"] = str(climate.get("TEMPERATE", 1.0))
     subs_main["CLIMATE_HOT"] = str(climate.get("HOT", 0.8))
 
-    # Terrain
     terrain = DEFAULTS.get("TERRAIN", {})
     subs_main["TERRAIN_MOUNTAIN"] = str(terrain.get("MOUNTAIN", 0.2))
     subs_main["TERRAIN_FOREST"] = str(terrain.get("FOREST", 0.2))
     subs_main["TERRAIN_NONE"] = str(terrain.get("NONE", 1.5))
 
-    # Lists and dicts
     subs_main["FOOD_LIST"] = format_list_tabs(DEFAULTS.get("FOOD", []), indent_tabs=2)
     subs_main["DRINK_LIST"] = format_list_tabs(DEFAULTS.get("DRINK", []), indent_tabs=2)
     subs_main["ROAD_DICT"] = format_dict_tabs(DEFAULTS.get("ROAD", {}), indent_tabs=2)
@@ -349,13 +324,18 @@ def generate_race(race_name, output_dir="assets", copy_sprite=False, template_ra
     subs_main["RESOURCE_DICT"] = format_dict_tabs(DEFAULTS.get("RESOURCE", {}), indent_tabs=1)
     subs_main["BOOST_DICT"] = format_dict_tabs(DEFAULTS.get("BOOST", {}), indent_tabs=1)
 
-    # Equipment
+    sprite_file = DEFAULTS.get("SPRITE_FILE", "")
+    icon_small = DEFAULTS.get("ICON_SMALL", "")
+    icon_big = DEFAULTS.get("ICON_BIG", "")
+    subs_main["SPRITE_FILE"] = sprite_file if sprite_file else race_upper
+    subs_main["ICON_SMALL"] = icon_small if icon_small else f"24->race->{race_name}->0"
+    subs_main["ICON_BIG"] = icon_big if icon_big else f"32->race->{race_name}->0"
+
     equip_enabled = DEFAULTS.get("EQUIPMENT_ENABLED", [])
     equip_disabled = DEFAULTS.get("EQUIPMENT_NOT_ENABLED", [])
     subs_main["EQUIPMENT_ENABLED_LIST"] = format_equipment_list(equip_enabled)
     subs_main["EQUIPMENT_NOT_ENABLED_LIST"] = format_equipment_list(equip_disabled)
 
-    # Stats – get from DEFAULTS or use the default
     stats_raw = DEFAULTS.get("STATS_RAW", "")
     if not stats_raw:
         stats_raw = DEFAULTS["STATS_RAW"]
@@ -369,7 +349,6 @@ def generate_race(race_name, output_dir="assets", copy_sprite=False, template_ra
     subs_text["RACE_NAMES"] = DEFAULTS.get("IDENTITY", {}).get("NAMES", race_plural)
     subs_text["RACE_UPPER"] = race_upper
 
-    # Pronouns – exact format: ["word1", "word2",]
     identity = DEFAULTS.get("IDENTITY", {})
     pronoun_keys = ["HE", "HEC", "HIM", "HIMC", "HIS", "HISC", "HIMSELF", "HIMSELFC", "CHILD", "CHILDC"]
     for key in pronoun_keys:
@@ -380,14 +359,12 @@ def generate_race(race_name, output_dir="assets", copy_sprite=False, template_ra
         else:
             subs_text[f"PRONOUN_{key}"] = ""
 
-    # Cultural lists
     cultural_fields = ["HELLO", "GOODBYE", "CURSE", "INSULT", "INSULTING",
                        "LORD", "CITY", "OTHERS", "SELVES", "SELF", "CHILDREN"]
     for field in cultural_fields:
         items = DEFAULTS.get(field, [])
         subs_text[f"{field}_LIST"] = format_cultural_list(items)
 
-    # Army names, pros, cons
     army = DEFAULTS.get("ARMY_NAMES", [])
     subs_text["ARMY_NAMES_LIST"] = format_cultural_list(army)
 
@@ -397,7 +374,6 @@ def generate_race(race_name, output_dir="assets", copy_sprite=False, template_ra
     cons = DEFAULTS.get("CONS", [])
     subs_text["CONS_LIST"] = format_cultural_list(cons)
 
-    # Descriptions – exact format with `",` on its own line
     desc_text = DEFAULTS.get("DESC_TEXT", f"{race_name}s, said to be the last creation of the gods. Excel at intelligent jobs and are decent farmers. They can be a constant headache with insanity, criminal behavior, and demands for lavish surroundings.")
     desc_long_text = DEFAULTS.get("DESC_LONG_TEXT", f"{race_name}s are regarded as the final creation of the Astarii, possessing free will and a flexible mind. Ancient {race_lower}s were immortal, but when they sided with Aminion in the second war of the gods, they were punished with mortality.\n{race_name}s make excellent researchers and administrators. They are also fairly good at farming.\n\nBread, Meat, Mushrooms, and Eggs are their favorite foods.")
     
@@ -460,16 +436,31 @@ def create_folder_structure(race_name, output_dir="assets", copy_sprite=False, t
 
     print("\n📁 Creating folder structure...")
     for folder in folders:
-        os.makedirs(os.path.join(output_dir, folder), exist_ok=True)
+        full_path = os.path.join(output_dir, folder)
+        os.makedirs(full_path, exist_ok=True)
 
-    # README
+    readme_content = f"""# Race: {race_name} (ID: {race_upper})
+
+This folder contains all sprites for the {race_name} race.
+
+## Required files
+- sprite/race/{race_upper}.spr (or .png) – main race sprite sheet
+- sprite/icon/24->race->{race_name}->0.png – small icon (24x24)
+- sprite/icon/32->race->{race_name}->0.png – large icon (32x32)
+
+## sprite/race/ subfolders
+- battle/ – combat animations
+- extra/ – extra sprites
+- face/ – facial expressions
+- infant/ – child sprites
+- misc/ – miscellaneous
+- skeleton/ – rigging
+- sleep/ – sleeping animations
+- worldcamp/ – world map camp sprites
+"""
     readme_path = os.path.join(output_dir, "sprite", f"README_{race_upper}.txt")
     with open(readme_path, "w") as f:
-        f.write(f"# Race: {race_name} (ID: {race_upper})\n\n")
-        f.write("Place your sprite files here:\n")
-        f.write(f"- sprite/race/{race_upper}.spr\n")
-        f.write(f"- sprite/icon/24->race->{race_name}->0.png\n")
-        f.write(f"- sprite/icon/32->race->{race_name}->0.png\n")
+        f.write(readme_content)
 
     if copy_sprite:
         print(f"   Copying sprites from {template_race}...")
@@ -492,7 +483,7 @@ def create_folder_structure(race_name, output_dir="assets", copy_sprite=False, t
 
 
 # ============================================
-# CLI
+# COMMAND LINE
 # ============================================
 
 if __name__ == "__main__":
